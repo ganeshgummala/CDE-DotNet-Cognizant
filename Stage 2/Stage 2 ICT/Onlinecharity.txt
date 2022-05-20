@@ -1,0 +1,627 @@
+HomeController
+using ASP_EF_App1.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace ASP_EF_App1.Controllers
+{
+    public class HomeController : Controller
+    {
+        // GET: Home
+        private UtilRepository repository;
+
+        public HomeController()
+        {
+            repository = new UtilRepository();
+        }
+        public ActionResult Index()
+        {
+            return View();
+        }
+
+        public ActionResult AddNGO()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public ActionResult AddNGO(NGO ngo)
+        {
+            if (ModelState.IsValid)
+            {
+               bool isDone = repository.AddNGO(ngo);
+                if (isDone)
+                {
+                    ViewBag.Message = "NGO details added successfully";
+                }
+                else
+                {
+                    ViewBag.Message = "Failed to add details. Try again later";
+                }
+                return View(ngo);
+            }
+           
+            return View(ngo);
+        }
+
+
+        public ActionResult AddDonor()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public ActionResult AddDonor(Donor donor)
+        {
+            if (ModelState.IsValid)
+            {
+                bool isDone = repository.AddDonor(donor);
+                if (isDone)
+                {
+                    ViewBag.Message = "Donor Details Added Successfully.";
+                }
+                else
+                {
+                    ViewBag.Message = "Failed to add details. Try again later";
+                }
+              
+                return View(donor);
+            }
+           
+            return View(donor);
+        }
+    }
+}
+
+Donation Controller
+using ASP_EF_App1.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace ASP_EF_App1.Controllers
+{
+    public class DonationController : Controller
+    {
+        private UtilRepository repository;
+        public DonationController()
+        {
+            repository = new UtilRepository();
+        }
+        // GET: Donation
+        public ActionResult Create()
+        {
+            Donation donation = new Donation();
+            donation.NGOList = repository.GetNGOs();
+            donation.DonorList = repository.GetDonors();
+
+            return View(donation);
+        }
+
+        [HttpPost]
+
+        public ActionResult Create(Donation donation)
+        {
+            
+            if (ModelState.IsValid)
+            {
+              
+                repository.AddDonation(donation);
+
+
+                return RedirectToAction("List");
+            }
+
+            return View(donation);
+        }
+
+        public ActionResult List()
+        {
+            return View(repository.GetDonations());
+        }
+    }
+}
+
+Charity Context
+
+using System;
+using System.Collections.Generic;
+using System.Data.Entity;
+using System.Linq;
+using System.Web;
+
+namespace ASP_EF_App1.Models
+{
+    public class CharityContext:DbContext
+    {
+        public CharityContext() : base("DataConnection")
+        {
+
+        }
+        public DbSet<NGO> NGOs { get; set; }
+        public DbSet<Donor> Donors { get; set; }
+
+        public DbSet<Donation>Donations { get; set; }
+    }
+}
+
+Donation
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace ASP_EF_App1.Models
+{
+    public class Donation
+    {
+        public IEnumerable<SelectListItem> _ngoList;
+        public IEnumerable<SelectListItem> _donorList;
+        [Key]
+        public int DonationId { get; set; }
+
+        [ForeignKey("Donor")]
+        public int DonorId { get; set; }
+        public Donor Donor { get; set; }
+        public IEnumerable<SelectListItem> DonorList { get; set; }
+
+        [ForeignKey("NGO")]
+        public int NGOId { get; set; }
+        public NGO NGO { get; set; }
+        public IEnumerable<SelectListItem> NGOList { get; set; }
+
+        public double CharityAmount { get; set; }
+
+        [NotMapped]
+        public string DonorName { get; set; }
+
+        [NotMapped]
+        public string NGOName { get; set; }
+    }
+}
+Donor.cs
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Web;
+
+namespace ASP_EF_App1.Models
+{
+    public class Donor
+    {
+
+        [Key]
+        public int DonorId { get; set; }
+
+        [Required(ErrorMessage = "Please provide donor name")]
+        public string Name { get; set; }
+
+        [Required(ErrorMessage = "Please provide donor address")]
+        public string Address { get; set; }
+    }
+}
+
+NGO.cs
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Web;
+
+namespace ASP_EF_App1.Models
+{
+    public class NGO
+    {
+    
+        [Key]
+        public int NGOId { get; set; }
+
+        [Required(ErrorMessage = "Please provide NGO name")]
+        public string Name { get; set; }
+
+        [Required(ErrorMessage = "Please provide NGO address")]
+        public string Address { get; set; }
+    }
+}
+
+Utilrepository
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace ASP_EF_App1.Models
+{
+    public class UtilRepository
+    {
+        private CharityContext context;
+        public UtilRepository()
+        {
+            context = new CharityContext();
+        }
+        public bool AddNGO(NGO ngo)
+        {
+            context.NGOs.Add(ngo);
+           int i = context.SaveChanges();
+            if (i > 0)
+            {
+                return true;
+            }
+            return false;
+        }
+
+        public bool AddDonor(Donor donor)
+        {
+            context.Donors.Add(donor);
+            int i = context.SaveChanges();
+            if (i > 0)
+            {
+                return true;
+            }
+            return false;
+
+        }
+
+        public IEnumerable<SelectListItem> GetDonors()
+        {
+           
+            var donors = context.Donors.Distinct().Select(n => new SelectListItem
+            {
+                Value = n.DonorId.ToString(),
+                Text = n.Name,
+                Selected=false
+            }).ToList();
+            var donorDef = new SelectListItem()
+            {
+                Value = null,
+                Text = "--Select Any Option--"
+            };
+            donors.Insert(0, donorDef);
+
+            return donors;
+           
+        }
+
+        public IEnumerable<SelectListItem> GetNGOs()
+        {
+
+           var ngoList = context.NGOs.Distinct().Select(n => new SelectListItem
+
+            {
+                Value = n.NGOId.ToString(),
+                Text = n.Name,
+                Selected=false
+            }).ToList();
+            var ngoDef = new SelectListItem()
+            {
+                Value = null,
+                Text = "--Select Any Option--"
+            };
+            ngoList.Insert(0, ngoDef);
+            return ngoList;
+
+        }
+
+        public bool AddDonation(Donation donation)
+        {
+            context.Donations.Add(donation);
+            int i = context.SaveChanges();
+            if (i > 0)
+            {
+                return true;
+            }
+            return false;
+
+        }
+
+
+        public List<Donation> GetDonations()
+        {
+            var donationDetails = (from d in context.Donors
+                                   join ds in context.Donations on d.DonorId equals ds.DonorId
+                                   join ng in context.NGOs on ds.NGOId equals ng.NGOId
+                                   select new
+                                   {
+                                       DonarName = d.Name,
+                                       NGOName = ng.Name,
+                                       CharityAmount = ds.CharityAmount
+                                   }).ToList().Select(x => new Donation()
+                                   {
+                                       NGOName = x.NGOName,
+                                       DonorName = x.DonarName,
+                                       CharityAmount = x.CharityAmount
+                                       
+                                   });
+            return donationDetails.ToList();
+        }
+
+    }
+}
+
+Create.cshtml
+@{
+Layout="~/Views/Shared/_Layout.cshtml";
+}
+
+@model ASP_EF_App1.Models.Donation
+
+@{
+    ViewBag.Title = "Create";
+}
+
+<h2>Create</h2>
+
+@using (Html.BeginForm()) 
+{
+    @Html.AntiForgeryToken()
+    
+    <div class="form-horizontal">
+        <h4>Donation</h4>
+        <hr />
+        @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+        <div class="form-group">
+            @Html.LabelFor(model => model.Donor, "Donor", htmlAttributes: new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.DropDownList("DonorId",Model.DonorList,htmlAttributes: new { @class = "form-control" })
+                @Html.ValidationMessageFor(model => model.DonorId, "", new { @class = "text-danger" })
+            </div>
+        </div>
+
+        <div class="form-group">
+            @Html.LabelFor(model => model.NGO, "NGO", htmlAttributes: new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.DropDownList("NGOId", Model.NGOList, htmlAttributes: new { @class = "form-control" })
+                @Html.ValidationMessageFor(model => model.NGOId, "", new { @class = "text-danger" })
+            </div>
+        </div>
+
+        <div class="form-group">
+            @Html.LabelFor(model => model.CharityAmount, htmlAttributes: new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.CharityAmount, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.CharityAmount, "", new { @class = "text-danger" })
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <input type="submit" value="Create" class="btn btn-default" id="btnSubmit" />
+            </div>
+        </div>
+    </div>
+}
+
+<div>
+    @Html.ActionLink("Back to List", "Index")
+</div>
+
+List.cshtml
+@{
+Layout="~/Views/Shared/_Layout.cshtml";
+}
+
+@model IEnumerable<ASP_EF_App1.Models.Donation>
+
+@{
+    ViewBag.Title = "List";
+}
+
+<h2>List</h2>
+<p>
+    @Html.ActionLink("Add Donation", "Create")
+</p>
+<div>
+    <h4>Donation</h4>
+    <hr />
+    <table class="table">
+        <tr>
+            <th>
+                @Html.DisplayNameFor(m =>m.Donor)
+            </th>
+            <th>
+                @Html.DisplayNameFor(m => m.NGO)
+            </th>
+            <th>
+                @Html.DisplayNameFor(m => m.CharityAmount)
+            </th>
+            <th></th>
+        </tr>
+
+        @foreach(var item in Model)
+            {
+                <tr>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.DonorName)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(m => item.NGOName)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(m => item.CharityAmount)
+                    </td>
+                </tr>
+            }
+        </table>
+
+</div>
+
+Adddonor.cshtml
+@{
+Layout="~/Views/Shared/_Layout.cshtml";
+}
+
+@model ASP_EF_App1.Models.Donor
+
+@{
+    ViewBag.Title = "AddDonor";
+}
+
+<h2>AddDonor</h2>
+
+
+
+@using (Html.BeginForm()) 
+{
+    @Html.AntiForgeryToken()
+    
+    <div class="form-horizontal">
+        <h4>Donor</h4>
+        <hr />
+        @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+        <div class="form-group">
+            @Html.LabelFor(model => model.Name, htmlAttributes: new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.Name, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.Name, "", new { @class = "text-danger" })
+            </div>
+        </div>
+
+        <div class="form-group">
+            @Html.LabelFor(model => model.Address, htmlAttributes: new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.Address, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.Address, "", new { @class = "text-danger" })
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <input type="submit" value="Save" class="btn btn-default" id="btnSubmit" />
+            </div>
+        </div>
+    </div>
+}
+<h2 id="Message"> @ViewBag.Message </h2>
+<div>
+    @Html.ActionLink("Back to List", "Index")
+</div>
+
+Addngo.cshtml
+@{
+Layout="~/Views/Shared/_Layout.cshtml";
+}
+
+@model ASP_EF_App1.Models.NGO
+
+@{
+    ViewBag.Title = "AddNGO";
+}
+
+<h2>AddNGO</h2>
+
+
+@using (Html.BeginForm()) 
+{
+    @Html.AntiForgeryToken()
+    
+    <div class="form-horizontal">
+        <h4>NGO</h4>
+        <hr />
+        @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+        <div class="form-group">
+            @Html.LabelFor(model => model.Name, htmlAttributes: new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.Name, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.Name, "", new { @class = "text-danger" })
+            </div>
+        </div>
+
+        <div class="form-group">
+            @Html.LabelFor(model => model.Address, htmlAttributes: new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.Address, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.Address, "", new { @class = "text-danger" })
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <input type="submit" value="Create" class="btn btn-default" />
+            </div>
+        </div>
+    </div>
+}
+
+<h2>@ViewBag.Message</h2>
+
+<div>
+    @Html.ActionLink("Back to List", "Index")
+</div>
+
+Index.cshtml
+@{
+Layout="~/Views/Shared/_Layout.cshtml";
+}
+
+@{
+    ViewBag.Title = "Home";
+}
+
+@Styles.Render("~/Content/css")
+
+<div class="root">
+
+    <div class="row">
+        <div class="col-lg-4 col-md-4 col-sm-6">
+            @Html.ActionLink("Add NGO", "AddNGO", "Home", htmlAttributes: new { @class = "actionLink", id= "lnkAddNGO" })
+        </div>
+        <div class="col-lg-4 col-md-4 col-sm-6">
+            @Html.ActionLink("Add Donor", "AddDonor", "Home", htmlAttributes: new { @class = "actionLink", id= "lnkAddDonor" })
+        </div>
+        <div class="col-lg-4 col-md-4 col-sm-6">
+            @*@Html.ActionLink("Make Donation", "Create", "Donation", htmlAttributes: new { @class = "actionLink", id= "lnkAddDonation" })*@
+            <a href="~/Donation/Create" class = "actionLink", id= "lnkAddDonation">Make Donation</a>
+        </div>
+    </div>
+</div>
+
+Layout.cshtml
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewBag.Title - Online Charity App</title>
+    @Styles.Render("~/Content/css")
+    @Scripts.Render("~/bundles/modernizr")
+</head>
+<body>
+    <div class="navbar navbar-inverse navbar-fixed-top">
+        <div class="container">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                @Html.ActionLink("Online Charity App", "Index", "Home", new { area = "" }, new { @class = "navbar-brand" })
+            </div>
+        </div>
+    </div>
+    <div class="container body-content">
+        @RenderBody()
+        <hr />
+        <footer>
+            <p>&copy; @DateTime.Now.Year - Online Charity App</p>
+        </footer>
+    </div>
+
+    @Scripts.Render("~/bundles/jquery")
+    @Scripts.Render("~/bundles/bootstrap")
+    @RenderSection("scripts", required: false)
+</body>
+</html>
+
+
+
+
